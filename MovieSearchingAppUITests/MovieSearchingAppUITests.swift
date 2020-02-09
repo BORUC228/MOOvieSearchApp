@@ -9,28 +9,48 @@
 import XCTest
 
 class MovieSearchingAppUITests: XCTestCase {
-        
+    let app = XCUIApplication()
+    let testMovieName: String = "Nocturnal Animals"
+    var movies :[Movie] = []
+    
     override func setUp() {
         super.setUp()
-        
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-        
-        // In UI tests it is usually best to stop immediately when a failure occurs.
+        getInfoAboutFilm(name: testMovieName)
         continueAfterFailure = false
-        // UI tests must launch the application that they test. Doing this in setup will make sure it happens for each test method.
         XCUIApplication().launch()
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
     
     override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        app.tabBars.buttons["Favorites"].tap()
+        app.buttons["Clear All"].tap()
+        app.buttons["Delete"].tap()
         super.tearDown()
     }
     
-    func testExample() {
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    func testSearchFilmByName() {
+        WelcomeScreen(app).getStartedButton.tap()
+        SearchScreen(app).searchMovieByName(testMovieName)
+        app.staticTexts[testMovieName].tap()
+        let movie: Movie = movies[0]
+        XCTAssertEqual(movies[0].title, testMovieName)
+        XCTAssertEqual(FilmCardScreen(app).movieName, testMovieName)
+        XCTAssertEqual(FilmCardScreen(app).movieDescription, movie.overview)
+        FilmCardScreen(app).addButton.tap()
+        XCTAssertTrue(app.staticTexts["Added!"].exists)
+        app.alerts.buttons["OK"].tap()
+        app.tabBars.buttons["Favorites"].tap()
+        XCTAssertTrue(app.tables.staticTexts[testMovieName].isEnabled)
     }
     
+    func getInfoAboutFilm(name: String) {
+        let toArray = name.components(separatedBy: " ")
+        let backToString = toArray.joined(separator: "+")
+        DispatchQueue.global().async{
+            let apiURL = "https://api.themoviedb.org/3/search/movie?api_key=24eeffd4c92654f6ca7d47d410cbfac3&query=" + backToString
+            let databaseURL = URL(string: apiURL)
+            let tryData = try! Data(contentsOf: databaseURL!)
+            let tryResults = try! JSONDecoder().decode(APIResults.self, from: tryData)
+            self.movies = tryResults.results
+        }
+    }
 }
